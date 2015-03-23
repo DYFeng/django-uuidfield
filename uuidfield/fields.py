@@ -2,6 +2,7 @@ import uuid
 
 from django import forms
 from django.db.models import Field, SubfieldBase
+
 try:
     from django.utils.encoding import smart_unicode
 except ImportError:
@@ -10,26 +11,12 @@ except ImportError:
 try:
     # psycopg2 needs us to register the uuid type
     import psycopg2.extras
+
     psycopg2.extras.register_uuid()
 except (ImportError, AttributeError):
     pass
 
-
-class StringUUID(uuid.UUID):
-    def __init__(self, *args, **kwargs):
-        # get around UUID's immutable setter
-        object.__setattr__(self, 'hyphenate', kwargs.pop('hyphenate', False))
-
-        super(StringUUID, self).__init__(*args, **kwargs)
-
-    def __str__(self):
-        if self.hyphenate:
-            return super(StringUUID, self).__str__()
-
-        return self.hex
-
-    def __len__(self):
-        return len(self.__str__())
+from . import StringUUID
 
 
 class UUIDField(Field):
@@ -45,7 +32,7 @@ class UUIDField(Field):
     def __init__(self, version=4, node=None, clock_seq=None,
                  namespace=None, name=None, auto=False, hyphenate=False,
                  *args, **kwargs):
-        assert version in (1, 3, 4, 5), "UUID version {ver}is not supported."\
+        assert version in (1, 3, 4, 5), "UUID version {ver}is not supported." \
             .format(ver=version)
         self.auto = auto
         self.version = version
@@ -144,7 +131,7 @@ class UUIDField(Field):
         if isinstance(value, str):
             if '-' in value:
                 value = value.replace('-', '')
-            uuid.UUID(value) # raises ValueError with invalid UUID format
+            uuid.UUID(value)  # raises ValueError with invalid UUID format
         return value
 
     def value_to_string(self, obj):
@@ -176,8 +163,10 @@ class UUIDField(Field):
         defaults.update(kwargs)
         return super(UUIDField, self).formfield(**defaults)
 
+
 try:
     from south.modelsinspector import add_introspection_rules
+
     add_introspection_rules([], [r"^uuidfield\.fields\.UUIDField"])
 except ImportError:
     pass
